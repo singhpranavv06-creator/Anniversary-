@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRAVIKA Constellation — Precision Starfield</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --gold-primary: #f5a623;
+            --gold-bright: #fff200;
+            --gold-glow: rgba(245, 166, 35, 0.4);
+            --bg-glass: rgba(5, 5, 8, 0.75);
+            --border-glass: rgba(245, 166, 35, 0.2);
+            --text-main: #f5f6fa;
+            --text-muted: #a4b0be;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #010103;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+        }
+
+        #webgl-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #010104;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .loader-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            letter-spacing: 0.6rem;
+            color: #ffffff;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 2s forwards 0.5s;
+        }
+
+        .loader-bar-container {
+            width: 240px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loader-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+            position: absolute;
+            animation: loadProgress 3s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+        }
+
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-open: space-between;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        header {
+            opacity: 0;
+            animation: fadeIn 2s forwards 3s;
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 1.6rem;
+            letter-spacing: 0.5rem;
+            text-transform: uppercase;
+            color: #ffffff;
+            font-weight: 400;
+        }
+
+        header p {
+            font-size: 0.75rem;
+            letter-spacing: 0.25rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .progression-counter {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            font-size: 0.75rem;
+            letter-spacing: 0.15rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            opacity: 0;
+            animation: fadeIn 2s forwards 3s;
+        }
+
+        .progression-counter span {
+            color: var(--gold-primary);
+            font-weight: 600;
+        }
+
+        #info-card {
+            position: absolute;
+            top: 50%;
+            right: -500px;
+            transform: translateY(-50%);
+            width: 430px;
+            max-width: 90vw;
+            background: var(--bg-glass);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border-glass);
+            border-radius: 4px;
+            padding: 40px;
+            box-sizing: border-box;
+            z-index: 20;
+            transition: right 1.2s cubic-bezier(0.25, 1, 0.5, 1), border-color 1s, box-shadow 1s;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8);
+            pointer-events: auto;
+        }
+
+        #info-card.active {
+            right: 60px;
+        }
+
+        #info-card.aurora-mode {
+            border-color: rgba(245, 166, 35, 0.4);
+            box-shadow: 0 30px 70px rgba(245, 166, 35, 0.15);
+        }
+
+        .card-letter {
+            font-family: 'Cinzel', serif;
+            font-size: 4.5rem;
+            line-height: 1;
+            color: var(--gold-primary);
+            margin-bottom: 5px;
+            font-weight: 700;
+            text-shadow: 0 0 20px var(--gold-glow);
+        }
+
+        .card-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.3rem;
+            letter-spacing: 0.25rem;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 15px;
+        }
+
+        .card-story {
+            font-size: 0.9rem;
+            line-height: 1.8;
+            color: var(--text-main);
+            text-align: justify;
+            min-height: 150px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            letter-spacing: 0.1rem;
+            text-transform: uppercase;
+            transition: color 0.3s;
+            padding: 5px;
+        }
+
+        .close-btn:hover {
+            color: var(--gold-primary);
+        }
+
+        #interaction-prompt {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            font-size: 0.75rem;
+            letter-spacing: 0.15rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            transition: opacity 0.8s;
+            opacity: 0;
+            animation: fadeIn 2s forwards 4s;
+            z-index: 10;
+        }
+
+        #custom-cursor {
+            width: 24px;
+            height: 24px;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 50%;
+            position: fixed;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 1000;
+            transition: width 0.3s, height 0.3s, border-color 0.3s;
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        @keyframes loadProgress {
+            to { width: 100%; }
+        }
+
+        @media(max-width: 768px) {
+            #info-card {
+                bottom: -100%;
+                top: auto;
+                left: 50%;
+                transform: translateX(-50%);
+                width: calc(100% - 30px);
+                transition: bottom 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+            }
+            #info-card.active {
+                bottom: 20px;
+                right: auto;
+            }
+            #hud {
+                padding: 20px;
+            }
+            #interaction-prompt {
+                display: none;
+            }
+            .progression-counter {
+                bottom: auto;
+                top: 80px;
+                left: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="custom-cursor"></div>
+    <div id="webgl-container"></div>
+
+    <div id="loader">
+        <div class="loader-title">Pravika Constellation</div>
+        <div class="loader-bar-container">
+            <div class="loader-bar"></div>
+        </div>
+    </div>
+
+    <div id="hud">
+        <header>
+            <h1>Pravika Constellation</h1>
+            <p>An Endless Visual Memoir</p>
+        </header>
+
+        <div class="progression-counter">
+            Memory Synchronization: <span id="sync-count">0/6</span>
+        </div>
+
+        <div id="interaction-prompt">
+            Drag to Orbit &bull; Scroll to Zoom &bull; Select Star to Remember
+        </div>
+    </div>
+
+    <div id="info-card">
+        <button class="close-btn" id="close-card-btn">Return to Void</button>
+        <div class="card-letter" id="card-letter">P</div>
+        <div class="card-title" id="card-title">Providence</div>
+        <div class="card-story" id="card-story"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- DATA ARCHITECTURE ---
+        const CONSTELLATION_DATA = [
+            { id: 0, letter: "P", title: "Providence", story: "When I first saw you in Class 6, something felt different. I didn't know your story, your favorite color, or even who you really were. Yet somehow, before I knew anything about you, I had a strange feeling that you would become someone important. It sounds impossible now, but a part of me already believed: this is the girl I'll fall for someday. What began as a single glance became the first star of everything that followed.", isAurora: false },
+            { id: 1, letter: "R", title: "Resonance", story: "Somewhere along the way, I fell deeply in love with you. The connection felt so natural that, without realizing it, you became the only person I looked for. I'd sit in class and spend entire days stealing glances at you. It wasn't that nobody else was there—it was simply that my eyes always found their way back to you. In a room full of people, somehow, all I could see was you.", isAurora: false },
+            { id: 2, letter: "A", title: "Anchor", story: "Then came Class 8, the year I finally told you how I felt. I dreamed of you being everything to me, but for the moment, friendship was where we stood. Even so, something changed. For the first time, I had the chance to talk to you, to know you beyond distant glances. Things became steadier, and what once felt like a dream finally started feeling real.", isAurora: false },
+            { id: 3, letter: "V", title: "Voyage", story: "At first, everything felt perfect—love, care, and happiness came so naturally. With each day, our feelings grew stronger. Then life took an unexpected turn when things about us reached your home. We talked less, the distance grew, and it felt like everything might fall apart. The closer we got, the harder life tried to pull us apart. Our story was never easy, but that's what made this journey so real and unforgettable.", isAurora: false },
+            { id: 4, letter: "I", title: "Infinity", story: "Then everything slowly turned calm after the chaos—not because everything was fixed, but because it stopped hurting the same way. Class 10 arrived, and life quietly started falling back into place. The distance reduced, conversations returned, and things felt natural again. Then came the moment I never thought would happen—you proposed. What once felt impossible suddenly became real. In short, it became one of the happiest moments of my life.", isAurora: false },
+            { id: 5, letter: "K", title: "Keystone", story: "Life now feels smooth and steady, as though nothing is forced anymore. It simply flows. You've become my better half in every real sense—someone who completes parts of me I didn't even know were missing. It's about how I love you, how you love me, and how we stand for each other without needing reasons. On difficult days, we don't let each other fall; we lift, support, and understand one another. Thank you for being my peace, my strength, and the love that makes everything feel stable.", isAurora: false },
+            { id: 6, letter: "A", title: "Ascension", story: "This is not an ending—it is a beginning. A promise that everything we have built will continue to grow stronger with every passing year. May the love, care, trust, understanding, and support between us increase beyond anything we can imagine. May we celebrate many more anniversaries together and create countless more memories beneath the same stars. And above all else, I love you, Aadvika.", isAurora: true }
+        ];
+
+        // --- ENGINE STATE ---
+        let visitedStars = new Set();
+        let auroraUnlocked = false;
+        let selectedStar = null;
+        let isTransitioning = false;
+        let typewriterTimeout = null;
+
+        let scene, camera, renderer, controls;
+        let ambientStars, backgroundDust, goldenStarsGroup, ribbonGroup, auroraSpiralParticles;
+        const starMeshObjects = [];
+        
+        let cameraTargetPosition = new THREE.Vector3(0, 0, 80);
+        let lookAtTarget = new THREE.Vector3(0, 0, 0);
+        let defaultCameraPosition = new THREE.Vector3(0, 15, 75);
+
+        const raycaster = new THREE.Raycaster();
+        raycaster.params.Points.threshold = 0.8; 
+        const mouse = new THREE.Vector2();
+
+        // --- NEEDLE-SHARP CRUNCHY GLOW SHADER ---
+        // Solves the "full circle" issue by rendering a bright pinpoint core that instantly drops into an ultra-thin cosmic aura
+        const PinpointGlowShader = {
+            vertexShader: `
+                uniform float uTime;
+                uniform float uScale;
+                attribute float aSize;
+                attribute float aPulseSpeed;
+                varying float vTwinkle;
+                void main() {
+                    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                    gl_Position = projectionMatrix * mvPosition;
+                    
+                    // Razor sharp twinkling frequency math
+                    vTwinkle = sin(uTime * aPulseSpeed) * 0.4 + 0.6;
+                    
+                    // Scale structural size appropriately with depth tracking
+                    gl_PointSize = aSize * uScale * (280.0 / -mvPosition.z);
+                }
+            `,
+            fragmentShader: `
+                varying float vTwinkle;
+                uniform vec3 uColor;
+                uniform float uCoreIntensity;
+                void main() {
+                    float dist = distance(gl_PointCoord, vec2(0.5, 0.5));
+                    if (dist > 0.5) discard;
+                    
+                    // High exponent formula enforces a piercing pinpoint center instead of a full flat disc
+                    float sharpCore = pow(1.0 - (dist * 2.0), 5.0) * uCoreIntensity;
+                    float softHalo = exp(-dist * 9.0) * vTwinkle;
+                    
+                    vec3 finalRGB = uColor * (sharpCore + softHalo);
+                    gl_FragColor = vec4(finalRGB, sharpCore + (softHalo * 0.3));
+                }
+            `
+        };
+
+        // --- LIFECYCLE INIT ---
+        function init() {
+            const container = document.getElementById('webgl-container');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x010103, 0.005);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(defaultCameraPosition);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.6;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.04;
+            controls.maxDistance = 130;
+            controls.minDistance = 10;
+            controls.enablePan = false;
+
+            createDistantCosmos();
+            buildWavyInfinityConstellation();
+
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('click', onClick);
+            window.addEventListener('touchstart', onTouchStart, { passive: true });
+            window.addEventListener('mousemove', onMouseMove);
+
+            document.getElementById('close-card-btn').addEventListener('click', resetCameraView);
+
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.style.display = 'none', 1500);
+            }, 3000);
+
+            animate(0);
+        }
+
+        // --- DISTANT BACKGROUND SPACE ---
+        function createDistantCosmos() {
+            const ambientCount = 2000; // Crisp, balanced density
+            const ambientGeometry = new THREE.BufferGeometry();
+            const ambientPositions = new Float32Array(ambientCount * 3);
+            const ambientSizes = new Float32Array(ambientCount);
+            const ambientPulseSpeed = new Float32Array(ambientCount);
+
+            for(let i=0; i < ambientCount * 3; i+=3) {
+                const radius = 130 + Math.random() * 120;
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                
+                ambientPositions[i] = radius * Math.sin(phi) * Math.cos(theta);
+                ambientPositions[i+1] = radius * Math.sin(phi) * Math.sin(theta);
+                ambientPositions[i+2] = radius * Math.cos(phi);
+
+                // Small, sharp white stars
+                ambientSizes[i/3] = 4.0 + Math.random() * 5.0;
+                ambientPulseSpeed[i/3] = 2.0 + Math.random() * 4.0;
+            }
+
+            ambientGeometry.setAttribute('position', new THREE.BufferAttribute(ambientPositions, 3));
+            ambientGeometry.setAttribute('aSize', new THREE.BufferAttribute(ambientSizes, 1));
+            ambientGeometry.setAttribute('aPulseSpeed', new THREE.BufferAttribute(ambientPulseSpeed, 1));
+
+            const ambientMaterial = new THREE.ShaderMaterial({
+                vertexShader: PinpointGlowShader.vertexShader,
+                fragmentShader: PinpointGlowShader.fragmentShader,
+                uniforms: {
+                    uTime: { value: 0 },
+                    uScale: { value: 1.0 },
+                    uColor: { value: new THREE.Color('#ffffff') },
+                    uCoreIntensity: { value: 2.5 }
+                },
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            ambientStars = new THREE.Points(ambientGeometry, ambientMaterial);
+            scene.add(ambientStars);
+
+            // Subtle nebulous backdrop dust
+            const dustCount = 450;
+            const dustGeometry = new THREE.BufferGeometry();
+            const dustPositions = new Float32Array(dustCount * 3);
+
+            for(let i=0; i<dustCount*3; i+=3) {
+                dustPositions[i] = (Math.random() - 0.5) * 200;
+                dustPositions[i+1] = (Math.random() - 0.5) * 130;
+                dustPositions[i+2] = (Math.random() - 0.5) * 200;
+            }
+
+            dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+            
+            const dustMaterial = new THREE.PointsMaterial({
+                color: 0x3d1d75,
+                size: 1.2,
+                transparent: true,
+                opacity: 0.12,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            backgroundDust = new THREE.Points(dustGeometry, dustMaterial);
+            scene.add(backgroundDust);
+        }
+
+        // --- ENHANCED ENERGETIC INFINITY RIBBON & NODES ---
+        function buildWavyInfinityConstellation() {
+            goldenStarsGroup = new THREE.Group();
+            scene.add(goldenStarsGroup);
+            
+            ribbonGroup = new THREE.Group();
+            scene.add(ribbonGroup);
+
+            // True mathematical Lemniscate generator with pronounced spatial depth vectors
+            const getInfinityPoint = (t, scaleX = 35, scaleY = 18) => {
+                const denom = 1 + Math.sin(t) * Math.sin(t);
+                const x = (scaleX * Math.cos(t)) / denom;
+                const y = (scaleY * Math.sin(t) * Math.cos(t)) / denom;
+                const z = Math.sin(t * 2) * 10; 
+                return new THREE.Vector3(x, y, z);
+            };
+
+            const parametricAngles = [
+                0.0,              // P
+                Math.PI * 0.35,   // R
+                Math.PI * 0.70,   // A
+                Math.PI * 1.02,   // V
+                Math.PI * 1.35,   // I
+                Math.PI * 1.68,   // K
+                Math.PI * 2.0     // A (Aurora Center Anchor)
+            ];
+
+            // 1. Instantiation of Sharp-Glow Yellow Golden Focal Stars
+            CONSTELLATION_DATA.forEach((data, index) => {
+                let pos;
+                if(data.isAurora) {
+                    pos = new THREE.Vector3(0, -1.5, 3); // Perfect cinematic framing anchor
+                } else {
+                    pos = getInfinityPoint(parametricAngles[index]);
+                }
+
+                const starGeo = new THREE.BufferGeometry();
+                starGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([pos.x, pos.y, pos.z]), 3));
+                
+                // Controlled sharp sizes to prevent bloated "disk" shapes
+                starGeo.setAttribute('aSize', new THREE.BufferAttribute(new Float32Array([data.isAurora ? 20.0 : 14.0]), 1));
+                starGeo.setAttribute('aPulseSpeed', new THREE.BufferAttribute(new Float32Array([4.5 + index]), 1));
+
+                const starMat = new THREE.ShaderMaterial({
+                    vertexShader: PinpointGlowShader.vertexShader,
+                    fragmentShader: PinpointGlowShader.fragmentShader,
+                    uniforms: {
+                        uTime: { value: 0 },
+                        uScale: { value: 1.2 },
+                        uColor: { value: data.isAurora ? new THREE.Color('#9e782f') : new THREE.Color('#ffae19') }, 
+                        uCoreIntensity: { value: data.isAurora ? 1.5 : 4.5 } // Pinpoint center brightness power
+                    },
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false
+                });
+
+                const starPoint = new THREE.Points(starGeo, starMat);
+                starPoint.userData = { starData: data, index: index, basePosition: pos.clone() };
+                
+                goldenStarsGroup.add(starPoint);
+                starMeshObjects.push(starPoint);
+            });
+
+            // 2. Enhanced Wavy Interweaving Ribbon System (Replaces the single flat connection)
+            // Generates 3 separate running filaments slightly offset to create a premium woven appearance
+            const createFilament = (offsetFactor, opacityScale) => {
+                const curvePoints = [];
+                for (let t = 0; t <= Math.PI * 2.005; t += 0.02) {
+                    let p = getInfinityPoint(t);
+                    // Introduce complex mathematical secondary wave ripples per strand
+                    p.x += Math.sin(t * 8) * (0.3 * offsetFactor);
+                    p.y += Math.cos(t * 8) * (0.3 * offsetFactor);
+                    p.z += Math.sin(t * 4) * (0.4 * offsetFactor);
+                    curvePoints.push(p);
+                }
+                const spline = new THREE.CatmullRomCurve3(curvePoints);
+                const splinePoints = spline.getPoints(350);
+                const lineGeometry = new THREE.BufferGeometry().setFromPoints(splinePoints);
+                
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: 0xffaa00,
+                    transparent: true,
+                    opacity: 0.25 * opacityScale,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                return new THREE.Line(lineGeometry, lineMaterial);
+            };
+
+            ribbonGroup.add(createFilament(0.0, 1.0));  // Core strand
+            ribbonGroup.add(createFilament(1.2, 0.5));  // Guard strand A
+            ribbonGroup.add(createFilament(-1.2, 0.5)); // Guard strand B
+
+            // 3. Dormant Aurora Particles
+            const spiralCount = 450;
+            const spiralGeo = new THREE.BufferGeometry();
+            const spiralPositions = new Float32Array(spiralCount * 3);
+            const spiralData = new Float32Array(spiralCount * 2);
+
+            for(let i=0; i<spiralCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const rad = 0.1 + Math.random() * 0.15;
+                spiralPositions[i*3] = Math.cos(angle) * rad;
+                spiralPositions[i*3+1] = Math.sin(angle) * rad;
+                spiralPositions[i*3+2] = (Math.random() - 0.5) * 0.2;
+                
+                spiralData[i*2] = angle;
+                spiralData[i*2+1] = rad;
+            }
+            spiralGeo.setAttribute('position', new THREE.BufferAttribute(spiralPositions, 3));
+
+            const spiralMat = new THREE.PointsMaterial({
+                color: 0xffdf00,
+                size: 0.7,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending
+            });
+
+            auroraSpiralParticles = new THREE.Points(spiralGeo, spiralMat);
+            auroraSpiralParticles.position.set(0, -1.5, 3);
+            scene.add(auroraSpiralParticles);
+        }
+
+        // --- PROGRESSION PIPELINE ---
+        function handleStarSelection(starObj) {
+            if (isTransitioning) return;
+            const data = starObj.userData.starData;
+
+            if (data.isAurora && !auroraUnlocked) {
+                const counterEl = document.querySelector('.progression-counter');
+                counterEl.style.color = '#ff4444';
+                setTimeout(() => counterEl.style.color = 'var(--text-muted)', 1000);
+                return;
+            }
+
+            selectedStar = starObj;
+            isTransitioning = true;
+            controls.enabled = false;
+
+            if (!data.isAurora) {
+                visitedStars.add(data.id);
+                document.getElementById('sync-count').innerText = `${visitedStars.size}/6`;
+                
+                if (visitedStars.size === 6 && !auroraUnlocked) {
+                    triggerAuroraUnlockSequence();
+                }
+            }
+
+            const nodePosition = starObj.userData.basePosition;
+            lookAtTarget.copy(nodePosition);
+
+            if (data.isAurora) {
+                cameraTargetPosition.set(nodePosition.x, nodePosition.y, nodePosition.z + 3.8);
+                triggerAuroraCinematicVFX();
+            } else {
+                cameraTargetPosition.set(nodePosition.x + 3.5, nodePosition.y + 1.8, nodePosition.z + 8.5);
+            }
+
+            displayNarrativeCard(data);
+        }
+
+        function triggerAuroraUnlockSequence() {
+            auroraUnlocked = true;
+            
+            const auroraMesh = starMeshObjects[6];
+            auroraMesh.material.uniforms.uColor.value.set('#fff200');
+            auroraMesh.material.uniforms.uCoreIntensity.value = 6.5; 
+            auroraMesh.geometry.attributes.aSize.array[0] = 30.0;
+            auroraMesh.geometry.attributes.aSize.needsUpdate = true;
+
+            ribbonGroup.children.forEach(line => {
+                line.material.color.set('#fff200');
+                line.material.opacity *= 2.0;
+            });
+        }
+
+        function triggerAuroraCinematicVFX() {
+            document.getElementById('info-card').classList.add('aurora-mode');
+            
+            let vfxProgress = 0;
+            function growVFX() {
+                if (vfxProgress < 1) {
+                    vfxProgress += 0.03;
+                    auroraSpiralParticles.material.opacity = vfxProgress * 0.9;
+                    backgroundDust.material.opacity = 0.12 + (vfxProgress * 0.2);
+                    requestAnimationFrame(growVFX);
+                }
+            }
+            growVFX();
+        }
+
+        function displayNarrativeCard(data) {
+            const card = document.getElementById('info-card');
+            const letterEl = document.getElementById('card-letter');
+            const titleEl = document.getElementById('card-title');
+            const storyEl = document.getElementById('card-story');
+
+            clearTimeout(typewriterTimeout);
+            storyEl.innerHTML = '';
+
+            letterEl.innerText = data.letter;
+            titleEl.innerText = data.title;
+            
+            card.classList.add('active');
+
+            let charIndex = 0;
+            function type() {
+                if (charIndex < data.story.length) {
+                    storyEl.innerHTML += data.story.charAt(charIndex);
+                    charIndex++;
+                    typewriterTimeout = setTimeout(type, 16);
+                } else {
+                    isTransitioning = false;
+                }
+            }
+            setTimeout(type, 800);
+        }
+
+        function resetCameraView() {
+            if (isTransitioning) return;
+            
+            isTransitioning = true;
+            selectedStar = null;
+            document.getElementById('info-card').classList.remove('active', 'aurora-mode');
+
+            cameraTargetPosition.copy(defaultCameraPosition);
+            lookAtTarget.set(0, 0, 0);
+
+            let shrinkProgress = 1;
+            function shrinkVFX() {
+                if (shrinkProgress > 0) {
+                    shrinkProgress -= 0.05;
+                    auroraSpiralParticles.material.opacity = shrinkProgress * 0.9;
+                    backgroundDust.material.opacity = 0.12 + (shrinkProgress * 0.2);
+                    if(backgroundDust.material.opacity < 0.12) backgroundDust.material.opacity = 0.12;
+                    requestAnimationFrame(shrinkVFX);
+                } else {
+                    controls.enabled = true;
+                    isTransitioning = false;
+                }
+            }
+            shrinkVFX();
+        }
+
+        // --- INTERACTION CONTROLLERS ---
+        function onClick(e) {
+            if (e.clientX > window.innerWidth - 450 && window.innerWidth > 768 && selectedStar) return;
+            
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(starMeshObjects);
+
+            if (intersects.length > 0) {
+                handleStarSelection(intersects[0].object);
+            }
+        }
+
+        function onTouchStart(e) {
+            if (e.touches.length === 1) {
+                const clientX = e.touches[0].clientX;
+                const clientY = e.touches[0].clientY;
+                
+                if(selectedStar && clientY > window.innerHeight * 0.5) return;
+
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(starMeshObjects);
+
+                if (intersects.length > 0) {
+                    handleStarSelection(intersects[0].object);
+                }
+            }
+        }
+
+        function onMouseMove(e) {
+            const cursor = document.getElementById('custom-cursor');
+            if (window.innerWidth > 768) {
+                cursor.style.display = 'block';
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+            }
+
+            const mX = (e.clientX / window.innerWidth) * 2 - 1;
+            const mY = -(e.clientY / window.innerHeight) * 2 + 1;
+            
+            const hoverRaycaster = new THREE.Raycaster();
+            hoverRaycaster.params.Points.threshold = 1.0;
+            hoverRaycaster.setFromCamera(new THREE.Vector2(mX, mY), camera);
+            const intersects = hoverRaycaster.intersectObjects(starMeshObjects);
+
+            if (intersects.length > 0) {
+                const targetData = intersects[0].object.userData.starData;
+                if (!targetData.isAurora || auroraUnlocked) {
+                    cursor.style.width = '38px';
+                    cursor.style.height = '38px';
+                    cursor.style.borderColor = 'var(--gold-bright)';
+                    return;
+                }
+            }
+            cursor.style.width = '24px';
+            cursor.style.height = '24px';
+            cursor.style.borderColor = 'rgba(255,255,255,0.25)';
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- ANIMATION TICK PIPELINE ---
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+
+            const time = timestamp * 0.001;
+
+            // Sync structural shader clocks
+            ambientStars.material.uniforms.uTime.value = time;
+            starMeshObjects.forEach(star => {
+                star.material.uniforms.uTime.value = time;
+            });
+
+            // Ambient background coordinate rotation
+            ambientStars.rotation.y = time * 0.002;
+            backgroundDust.rotation.y = -time * 0.005;
+
+            // Fluid sinusoidal spatial suspension logic
+            goldenStarsGroup.children.forEach((star, index) => {
+                const base = star.userData.basePosition;
+                star.position.y = base.y + Math.sin(time * 1.5 + index) * 0.2;
+                star.position.z = base.z + Math.cos(time * 1.0 + index) * 0.15;
+            });
+
+            // Energy wave oscillation across running ribbon strands
+            ribbonGroup.children.forEach((line, index) => {
+                line.material.opacity = ((auroraUnlocked ? 0.5 : 0.25) + Math.sin(time * 2.0 + index) * 0.08) * (index === 0 ? 1.0 : 0.5);
+            });
+
+            // Aurora Helix system engine loops
+            if (auroraUnlocked && auroraSpiralParticles.material.opacity > 0) {
+                const posArr = auroraSpiralParticles.geometry.attributes.position.array;
+                const count = posArr.length / 3;
+                
+                for(let i=0; i<count; i++) {
+                    let angle = spiralData[i*2] + time * 1.5;
+                    let radius = spiralData[i*2+1];
+                    
+                    if (selectedStar && selectedStar.userData.starData.isAurora) {
+                        radius *= 5.5;
+                    } else {
+                        radius *= 2.2;
+                    }
+
+                    posArr[i*3] = Math.cos(angle) * radius;
+                    posArr[i*3+1] = Math.sin(angle) * radius;
+                    posArr[i*3+2] += Math.sin(time * 2.0 + i) * 0.004;
+                }
+                auroraSpiralParticles.geometry.attributes.position.needsUpdate = true;
+                auroraSpiralParticles.rotation.z = -time * 0.8;
+            }
+
+            // Interpolated camera tracking updates
+            if (isTransitioning || selectedStar) {
+                camera.position.lerp(cameraTargetPosition, 0.045);
+                controls.target.lerp(lookAtTarget, 0.045);
+            } else {
+                controls.update();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
